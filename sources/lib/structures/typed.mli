@@ -72,6 +72,7 @@ and 'a tt_desc =
   | TTnamed of Hstring.t * ('a tterm, 'a) annoted
   | TTite of ('a tform, 'a) annoted *
              ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
+  | TTsharp of bool * ('a tterm, 'a) annoted  * Hstring.t
 
 and 'a tatom =
   | TAtrue
@@ -82,6 +83,7 @@ and 'a tatom =
   | TAle of ('a tterm, 'a) annoted list
   | TAlt of ('a tterm, 'a) annoted list
   | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
+  | TTisConstr of ('a tterm, 'a) annoted  * Hstring.t
 
 and 'a quant_form = {
   (* quantified variables that appear in the formula *)

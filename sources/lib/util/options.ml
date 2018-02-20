@@ -56,6 +56,7 @@ module M = struct
   let debug_fm = ref false
   let debug_fpa = ref 0
   let debug_sum = ref false
+  let debug_adt = ref false
   let debug_arith = ref false
   let debug_combine = ref false
   let debug_bitv = ref false
@@ -302,6 +303,10 @@ module M = struct
     "-dsum",
     Arg.Set debug_sum,
     "  sets the debugging flag of Sum";
+
+    "-dadt",
+    Arg.Set debug_adt,
+    "  sets the debugging flag of ADTs";
 
     "-darith",
     Arg.Set debug_arith,
@@ -707,6 +712,7 @@ let set_debug_use b = M.debug_use := b
 let set_debug_uf b = M.debug_uf := b
 let set_debug_fm b = M.debug_fm := b
 let set_debug_sum b = M.debug_sum := b
+let set_debug_adt b = M.debug_adt := b
 let set_debug_arith b = M.debug_arith := b
 let set_debug_bitv b = M.debug_bitv := b
 let set_debug_ac   b = M.debug_ac := b
@@ -779,6 +785,7 @@ let debug_uf () = !M.debug_uf
 let debug_fm () = !M.debug_fm
 let debug_fpa () = !M.debug_fpa
 let debug_sum () = !M.debug_sum
+let debug_adt () = !M.debug_adt
 let debug_arith () = !M.debug_arith
 let debug_bitv () = !M.debug_bitv
 let debug_ac   () = !M.debug_ac

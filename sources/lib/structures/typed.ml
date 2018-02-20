@@ -75,6 +75,7 @@ and 'a tt_desc =
   | TTnamed of Hstring.t * ('a tterm, 'a) annoted
   | TTite of ('a tform, 'a) annoted *
              ('a tterm, 'a) annoted * ('a tterm, 'a) annoted
+  | TTsharp of bool * ('a tterm, 'a) annoted  * Hstring.t
 
 and 'a tatom =
   | TAtrue
@@ -85,6 +86,7 @@ and 'a tatom =
   | TAle of ('a tterm, 'a) annoted list
   | TAlt of ('a tterm, 'a) annoted list
   | TApred of ('a tterm, 'a) annoted * bool (* true <-> negated *)
+  | TTisConstr of ('a tterm, 'a) annoted  * Hstring.t
 
 and 'a quant_form = {
   (* quantified variables that appear in the formula *)
@@ -215,6 +217,9 @@ let rec print_term fmt t = match t.c.tt_desc with
   | TTite(cond, t1, t2) ->
     fprintf fmt "(if %a then %a else %a)"
       print_formula cond print_term t1 print_term t2
+  | TTsharp (grded, t1, s) ->
+    fprintf fmt "%a#%s%s"
+      print_term t1 (if grded then "" else "!") (Hstring.view s)
 
 and print_term_binders fmt l =
   match l with
@@ -243,6 +248,8 @@ and print_atom fmt a =
   | TApred (t, negated) ->
     if negated then fprintf fmt "(not (%a))" print_term t
     else print_term fmt t
+  | TTisConstr (t1, s) ->
+    fprintf fmt "%a ? %s" print_term t1 (Hstring.view s)
   | _ -> assert false
 
 and print_triggers fmt l =

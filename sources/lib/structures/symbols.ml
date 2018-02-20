@@ -36,7 +36,8 @@ type operator =
   | Sqrt_real_default | Sqrt_real_excess
   | Min_real | Min_int | Max_real | Max_int | Integer_log2 | Pow_real_int
   | Pow_real_real | Integer_round
-  | Constr of Hstring.t (* enums *)
+  | Constr of Hstring.t (* enums, adts *)
+  | Destruct of Hstring.t * bool
 
 type name_kind = Ac | Other
 
@@ -65,6 +66,7 @@ let var s = Var (Hstring.make s)
 let int i = Int (Hstring.make i)
 let real r = Real (Hstring.make r)
 let constr s = Op (Constr (Hstring.make s))
+let destruct ~guarded s = Op (Destruct (Hstring.make s, guarded))
 
 let mk_bound name sort ~is_open ~is_lower =
   let kind =
@@ -93,6 +95,7 @@ let compare_kind k1 k2 = match k1, k2 with
   | Ac   , _     -> 1
   | _    , Ac    -> -1
   | Other, Other -> 0
+
 
 let compare s1 s2 =  match s1, s2 with
   | Name (n1,k1), Name (n2,k2) ->
@@ -156,7 +159,10 @@ let to_string ?(show_vars=true) =  function
   | Op Div -> "/"
   | Op Modulo -> "%"
   | Op (Access s) -> "@Access_"^(Hstring.view s)
-  | Op (Constr s) -> "@Constr_"^(Hstring.view s)
+  | Op (Constr s) -> (Hstring.view s)
+  | Op (Destruct (s,g)) ->
+    Format.sprintf "%s%s" (if g then "" else "!") (Hstring.view s)
+
   | Op Record -> "@Record"
   | Op Get -> "get"
   | Op Set -> "set"

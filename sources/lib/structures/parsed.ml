@@ -93,6 +93,9 @@ and pp_desc =
   | PPcheck of lexpr
   | PPcut of lexpr
   | PPcast of lexpr * ppure_type
+  | PPmatch of lexpr * (lexpr * lexpr) list
+  | PPisConstr of lexpr * string
+  | PPsharp of bool * lexpr * string
 
 (* Declarations. *)
 
@@ -105,7 +108,10 @@ type name_kind = Symbols.name_kind
 type body_type_decl =
   | Record of (string * ppure_type) list  (* lbl : t *)
   | Enum of string list
+  | Algebraic of (string * (string * ppure_type) list) list
   | Abstract
+
+type type_decl = Loc.t * string list * string * body_type_decl
 
 type decl =
   | Theory of Loc.t * string * string * decl list
@@ -119,6 +125,6 @@ type decl =
   | Function_def of
       Loc.t * (string * string) *
       (Loc.t * string * ppure_type) list * ppure_type * lexpr
-  | TypeDecl of Loc.t * string list * string * body_type_decl
+  | TypeDecl of type_decl list
 
 type file = decl list

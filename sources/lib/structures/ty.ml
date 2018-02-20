@@ -40,6 +40,7 @@ type t =
   | Tfarray of t * t
   | Tnext of t
   | Tsum of Hstring.t * Hstring.t list
+  | Tadt of Hstring.t * t list  * (Hstring.t * (Hstring.t * t) list) list
   | Trecord of trecord
 
 and tvar = { v : int ; mutable value : t option }
@@ -57,7 +58,7 @@ exception Shorten of t
 (*** pretty print ***)
 let print full =
   let h = Hashtbl.create 17 in
-  let rec print fmt = function
+  let rec print full fmt = function
     | Tint -> fprintf fmt "int"
     | Treal -> fprintf fmt "real"
     | Tbool -> fprintf fmt "bool"
@@ -70,14 +71,15 @@ let print full =
       else
         (Hashtbl.add h v ();
          (*fprintf fmt "('a_%d->%a)" v print t *)
-         print fmt t)
+         print full fmt t)
     | Tvar{v=v ; value = Some t} ->
       (*fprintf fmt "('a_%d->%a)" v print t *)
-      print fmt t
-    | Text(l, s) -> fprintf fmt "%a %s" print_list l (Hstring.view s)
-    | Tfarray (t1, t2) -> fprintf fmt "(%a,%a) farray" print t1 print t2
-    | Tnext t -> fprintf fmt "%a next" print t
-    | Tsum(s, _) -> fprintf fmt "%s" (Hstring.view s)
+      print full fmt t
+    | Text(l, s) -> fprintf fmt "%a <ext>%s" print_list l (Hstring.view s)
+    | Tfarray (t1, t2) ->
+      fprintf fmt "(%a,%a) farray" (print full) t1 (print full) t2
+    | Tnext t -> fprintf fmt "%a next" (print full) t
+    | Tsum(s, _) -> fprintf fmt "<sum>%s" (Hstring.view s)
     | Trecord {args=lv; name=n; lbs=lbls} ->
       fprintf fmt "%a %s" print_list lv (Hstring.view n);
       if full then begin
@@ -86,25 +88,48 @@ let print full =
         List.iter
           (fun (s, t) ->
              fprintf fmt "%s%s : %a" (if !first then "" else "; ")
-               (Hstring.view s) print t;
+               (Hstring.view s) (print full) t;
              first := false
           ) lbls;
         fprintf fmt "}"
       end
+    | Tadt (n, lv, cases) ->
+      fprintf fmt "%a <adt>%s" print_list lv (Hstring.view n);
+      if full then begin
+        fprintf fmt " = {";
+        let first = ref true in
+        List.iter
+          (fun (s, t) ->
+             fprintf fmt "%s%s%a" (if !first then "" else " | ")
+               (Hstring.view s) print_tuple t;
+             first := false
+          ) cases;
+        fprintf fmt "}"
+      end
+
+  and print_tuple fmt = function
+    | [] -> ()
+    | (d, e)::l ->
+      fprintf fmt " of { %a : %a " Hstring.print d (print false) e;
+      List.iter
+        (fun (d, e) ->
+           fprintf fmt "; %a : %a " Hstring.print d (print false) e
+        ) l;
+      fprintf fmt "}"
 
   and print_list fmt = function
     | [] -> ()
-    | [t] -> fprintf fmt "%a " print t
+    | [t] -> fprintf fmt "%a " (print full) t
     | t::l ->
-      fprintf fmt "(%a" print t;
-      List.iter (fprintf fmt ", %a" print) l;
+      fprintf fmt "(%a" (print full) t;
+      List.iter (fprintf fmt ", %a" (print full)) l;
       fprintf fmt ")"
   in
   print, print_list
 
 let print_list = snd (print false)
-let print_full = fst (print true)
-let print      = fst (print false)
+let print_full = fst (print true) true
+let print      = fst (print false) false
 
 (* smart constructors *)
 
@@ -113,6 +138,14 @@ let tunit = Text ([],Hstring.make "unit")
 let text l s = Text (l,Hstring.make s)
 
 let tsum s lc = Tsum (Hstring.make s, List.map Hstring.make lc)
+let tadt ty_vars s lc =
+  Tadt (
+    Hstring.make s, ty_vars,
+    List.map (fun (s, l) ->
+        let l = List.map (fun (d, e) -> Hstring.make d, e) l in
+        Hstring.make s, l
+      ) lc
+  )
 
 let trecord lv n lbs =
   let lbs = List.map (fun (l,ty) -> Hstring.make l, ty) lbs in
@@ -140,6 +173,16 @@ let rec shorten ty =
     r.args <- List.map shorten r.args;
     r.lbs <- List.map (fun (lb, ty) -> lb, shorten ty) r.lbs;
     ty
+
+  | Tadt (n, args, cases) ->
+    let args' = List.map shorten args in
+    let cases' =
+      List.map (fun (s, l) ->
+          s, List.map (fun (d, e) -> d, shorten e) l
+        ) cases
+    in
+    (* should not rebuild the type if no changes are made *)
+    Tadt (n, args', cases')
 
   | Tnext t1 ->
     let t1' = shorten t1 in
@@ -198,6 +241,21 @@ let rec equal t1 t2 =
   | Tint, Tint | Treal, Treal | Tbool, Tbool | Tunit, Tunit -> true
   | Tbitv n1, Tbitv n2 -> n1 =n2
   | Tnext t1, Tnext t2 -> equal t1 t2
+
+  | Tadt (s1, pars1, cases1), Tadt (s2, pars2, cases2) ->
+    begin
+      try
+        Hstring.equal s1 s2 && List.for_all2 equal pars1 pars2 &&
+        List.for_all2
+          (fun (c1, l1) (c2, l2) ->
+             Hstring.equal c1 c2 &&
+             List.for_all2
+               (fun (lbl1, ty1) (lbl2, ty2) ->
+                  Hstring.equal lbl1 lbl2 && equal ty1 ty2) l1 l2
+          ) cases1 cases2
+      with Invalid_argument _ -> false
+    end
+
   | _ -> false
 
 let rec compare t1 t2 =
@@ -263,7 +321,11 @@ let rec unify t1 t2 =
   | Tsum(s1, _) , Tsum(s2, _) when Hstring.equal s1 s2 -> ()
   | Tint, Tint | Tbool, Tbool | Treal, Treal | Tunit, Tunit -> ()
   | Tbitv n , Tbitv m when m=n -> ()
-  | _ , _ ->
+
+  | Tadt(n1, p1, c1), Tadt (n2, p2, c2) when Hstring.equal n1 n2 ->
+    List.iter2 unify p1 p2
+
+  | _ , _ [@ocaml.ppwarning "TODO: remove fragile pattern "] ->
     raise (TypeClash(t1,t2))
 
 
@@ -317,6 +379,20 @@ let apply_subst =
           {args = args;
            name = r.name;
            lbs = lbs}
+
+    | Tadt(name, params, cases)
+        [@ocaml.ppwarning "TODO: detect when there are no changes "]
+      ->
+      let cases =
+        List.map
+          (fun (cstr, args) ->
+             cstr,
+             List.map (fun (d, e) -> d, apply_subst s e) args
+          ) cases
+      in
+      let params = List.map (apply_subst s) params in
+      Tadt (name, params, cases)
+
 
     | Tnext t ->
       let t' = apply_subst s t in
@@ -406,6 +482,8 @@ let vty_of t =
   in
   vty_of_rec Svty.empty t
 
+
+    [@ocaml.ppwarning "TODO: detect when there are no changes "]
 let rec monomorphize ty =
   match ty with
   | Tint | Treal | Tbool | Tunit   | Tbitv _  | Tsum _ -> ty
@@ -421,8 +499,22 @@ let rec monomorphize ty =
   | Tvar {v=v; value=None} -> text [] ("'_c"^(string_of_int v))
   | Tvar ({value=Some ty1} as r) ->
     Tvar { r with value = Some (monomorphize ty1)}
+  | Tadt(name, params, cases) ->
+    let params = List.map monomorphize params in
+    let cases =
+      List.map
+        (fun (cstr, args_ty) ->
+           cstr,
+           List.map (fun (d, e) -> d, monomorphize e) args_ty
+        ) cases
+    in
+    Tadt(name, params, cases)
+
 
 
 let print_subst fmt sbt =
   M.iter (fun n ty -> fprintf fmt "%d -> %a" n print ty) sbt;
   fprintf fmt "@?"
+
+
+

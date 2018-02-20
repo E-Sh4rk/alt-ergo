@@ -92,7 +92,7 @@ module Shostak
   end
   (*BISECT-IGNORE-END*)
 
-  let is_mine_symb sy =
+  let is_mine_symb sy _ty =
     let open Sy in
     match sy with
     | Int _ | Real _ -> true
@@ -741,8 +741,10 @@ module Shostak
       if P.is_const (embed r) != None then None
       else
       if List.exists
-          (fun (t,x) ->is_mine_symb (Term.view t).Term.f &&
-                       X.leaves x == []) eq
+          (fun (t,x) ->
+             let {T.f; ty} = Term.view t in
+             is_mine_symb f ty &&
+             X.leaves x == []) eq
       then None
       else
         let term_of_cst, cpt = match X.type_info r with

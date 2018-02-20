@@ -37,6 +37,7 @@ type t =
   | Tfarray of t * t
   | Tnext of t
   | Tsum of Hstring.t * Hstring.t list
+  | Tadt of Hstring.t * t list  * (Hstring.t * (Hstring.t * t) list) list
   | Trecord of trecord
 
 and tvar = { v : int ; mutable value : t option }
@@ -59,6 +60,7 @@ val tunit : t
 
 val text : t list -> string -> t
 val tsum : string -> string list -> t
+val tadt : t list -> string -> (string * (string * t) list) list -> t
 val trecord : t list -> string -> (string * t) list -> t
 
 val shorten : t -> t

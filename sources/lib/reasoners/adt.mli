@@ -19,36 +19,24 @@
 (*  ------------------------------------------------------------------------  *)
 (*                                                                            *)
 (*     Alt-Ergo: The SMT Solver For Software Verification                     *)
-(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
+(*     Copyright (C) 2013-2017 --- OCamlPro SAS                               *)
 (*                                                                            *)
 (*     This file is distributed under the terms of the Apache Software        *)
 (*     License version 2.0                                                    *)
 (*                                                                            *)
 (******************************************************************************)
 
-type t
+type 'a abstract
 
-val make : string -> t
+module type ALIEN = sig
+  include Sig.X
+  val embed : r abstract -> r
+  val extract : r -> (r abstract) option
+end
 
-val view : t -> string
+module Shostak
+    (X : ALIEN) : Sig.SHOSTAK with type r = X.r and type t = X.r abstract
 
-val print : Format.formatter -> t -> unit
-
-val equal : t -> t -> bool
-
-val compare : t -> t -> int
-
-val hash : t -> int
-
-val empty : t
-
-val list_assoc : t -> (t * 'a) list -> 'a
-
-val fresh_string : unit -> string
-
-val is_fresh_string : string -> bool
-
-val is_fresh_skolem : string -> bool
-
-module Set : Set.S with type elt = t
-module Map : Map.S with type key = t
+module Relation
+    (X : ALIEN) (Uf : Uf.S with type r = X.r) : Sig.RELATION
+  with type r = X.r and type uf = Uf.t

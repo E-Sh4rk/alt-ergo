@@ -38,6 +38,7 @@ val set_debug_use : bool -> unit
 val set_debug_uf : bool -> unit
 val set_debug_fm : bool -> unit
 val set_debug_sum : bool -> unit
+val set_debug_adt : bool -> unit
 val set_debug_arith : bool -> unit
 val set_debug_bitv : bool -> unit
 val set_debug_ac : bool -> unit
@@ -110,6 +111,7 @@ val debug_uf : unit -> bool
 val debug_fm : unit -> bool
 val debug_fpa : unit -> int
 val debug_sum : unit -> bool
+val debug_adt : unit -> bool
 val debug_arith : unit -> bool
 val debug_bitv : unit -> bool
 val debug_ac : unit -> bool

@@ -45,25 +45,31 @@ module Types = struct
     to_ty : Ty.t MString.t;
     from_labels : string MString.t; }
 
-  let to_tyvars = ref MString.empty
+  let (to_tyvars : Ty.t MString.t ref) = ref MString.empty
 
   let empty =
     { to_ty = MString.empty;
       from_labels = MString.empty }
 
-  let fresh_vars env vars loc =
+  let fresh_vars ?(recursive=false) env vars loc =
     List.map
       (fun x ->
-         if MString.mem x !to_tyvars then
-           error (TypeDuplicateVar x) loc;
-         let nv = Ty.Tvar (Ty.fresh_var ()) in
-         to_tyvars := MString.add x nv !to_tyvars;
-         nv
+         if recursive then
+           try (MString.find x !to_tyvars)
+           with Not_found -> assert false
+         else begin
+           if MString.mem x !to_tyvars then
+             error (TypeDuplicateVar x) loc;
+           let nv = Ty.Tvar (Ty.fresh_var ()) in
+           to_tyvars := MString.add x nv !to_tyvars;
+           nv
+         end
       ) vars
 
   let check_number_args loc lty ty =
     match ty with
-    | Ty.Text (lty', s) | Ty.Trecord {Ty.args=lty'; name=s} ->
+    | Ty.Text (lty', s) | Ty.Trecord {Ty.args=lty'; name=s}
+    | Ty.Tadt (s,lty',_) ->
       if List.length lty <> List.length lty' then
         error (WrongNumberofArgs (Hstring.view s)) loc;
       lty'
@@ -120,9 +126,9 @@ module Types = struct
             error (UnknownType s) loc
       end
 
-  let add env vars id body loc =
-    if MString.mem id env.to_ty then error (ClashType id) loc;
-    let ty_vars = fresh_vars env vars loc in
+  let add ?(recursive=false) env vars id body loc =
+    if MString.mem id env.to_ty && not recursive then error (ClashType id) loc;
+    let ty_vars = fresh_vars ~recursive env vars loc in
     match body with
     | Abstract ->
       { env with to_ty = MString.add id (Ty.text ty_vars id) env.to_ty }
@@ -135,6 +141,18 @@ module Types = struct
         from_labels =
           List.fold_left
             (fun fl (l,_) -> MString.add l id fl) env.from_labels lbs }
+    | Algebraic l
+        [@ocaml.ppwarning "TODO: check non duplication ? other things"]
+
+      ->
+      let l =
+        List.map (fun (constr, l) ->
+            constr
+              [@ocaml.ppwarning "TODO: register selectors in env"],
+            List.map (fun (field, pp) -> field, ty_of_pp loc env None pp) l
+          ) l
+      in
+      { env with to_ty = MString.add id (Ty.tadt ty_vars id l) env.to_ty }
 
   module SH = Set.Make(Hstring)
 
@@ -266,8 +284,8 @@ module Env = struct
 
   let list_of {var_map=m} = MString.fold (fun _ c acc -> c::acc) m []
 
-  let add_type_decl env vars id body loc =
-    { env with types = Types.add env.types vars id body loc }
+  let add_type_decl ?(recursive=false) env vars id body loc =
+    { env with types = Types.add ~recursive env.types vars id body loc }
 
   (* returns a type with fresh variables *)
   let fresh_type env n loc =
@@ -312,6 +330,8 @@ let rec freevars_term acc t = match t.c.tt_desc with
 
   | TTite (cond,t1,t2) ->
     List.fold_left freevars_term (Sy.union (freevars_form cond.c) acc) [t1;t2]
+
+  | TTsharp(_, t, _) -> freevars_term acc t
 
 and freevars_atom a = match a.c with
   | TAeq lt | TAneq lt | TAle lt
@@ -651,6 +671,26 @@ and type_term_desc env loc = function
         error (Unification(t1,t2)) loc
     end
 
+  | PPsharp (grded, t,lbl)
+      [@ocaml.ppwarning "TODO: check that lbl exists ? t is algebraic ? \
+                         see records ?"]
+      [@ocaml.ppwarning "XXX improve. For each selector, store its \
+                         corresponding constructor when typechecking ?"] ->
+    let te = type_term env t in
+    begin
+      try
+        let _, {Env.args; result} = Env.fresh_type env lbl loc in
+        match args with
+        | [arg] ->
+          Ty.unify te.c.tt_ty arg;
+          let result = Ty.shorten result in
+          (*fprintf fmt "Ici: %s has type %a@." lbl Ty.print arg;*)
+          TTsharp (grded, te, Hstring.make lbl), result
+        | _ -> assert false
+      with Ty.TypeClash(t1,t2) -> error (Unification(t1,t2)) loc
+    end
+  (* est ce que les selecteurs sont aussi polymorphes dans SMT ? *)
+
   | _ -> error SyntaxError loc
 
 
@@ -850,6 +890,18 @@ and type_form ?(in_theory=false) env f =
           | _ -> error (ShouldHaveTypeIntorReal ty) t1.pp_loc
         with Ty.TypeClash(t1,t2) -> error (Unification(t1,t2)) f.pp_loc
       in r, freevars_form r
+
+
+    | PPisConstr (t,lbl)
+        [@ocaml.ppwarning "TODO: check that lbl exists ? t is algebraic ? \
+                           see records ?"] ->
+      let tt = type_term env t in
+      let top = TTisConstr (tt, Hstring.make lbl) in
+      let r = TFatom {c = top; annot=new_id ()} in
+      r, freevars_form r
+
+
+
     | PPinfix(f1,op ,f2) ->
       Options.tool_req 1 "TR-Typing-OpConnectors$_F$";
       begin
@@ -1019,7 +1071,8 @@ and type_trigger in_theory env l =
          with Error _ ->
            ignore (type_form env t);
            if Options.verbose () then
-             fprintf fmt "; %a The given trigger is not a term and is ignored@."
+             fprintf fmt
+               "; %a The given trigger is not a term and is ignored@."
                Loc.report t.pp_loc;
            (* hack to typecheck *)
            type_term env {t with pp_desc = PPconst ConstVoid}
@@ -1193,6 +1246,20 @@ let rec no_alpha_renaming_b ((up, m) as s) f =
     no_alpha_renaming_b s f1;
     List.iter (no_alpha_renaming_b s) hyp;
     List.iter (fun (l, _) -> List.iter (no_alpha_renaming_b s) l) trs
+
+  | PPmatch(e, cases) ->
+    no_alpha_renaming_b s e;
+    List.iter (fun (p, e) ->
+        no_alpha_renaming_b s p;
+        no_alpha_renaming_b s e
+      ) cases
+
+  | PPisConstr (e, lbl) ->
+    no_alpha_renaming_b s e
+
+  | PPsharp (_, e, lbl) ->
+    no_alpha_renaming_b s e
+
 
 let rec alpha_renaming_b ((up, m) as s) f =
   match f.pp_desc with
@@ -1426,6 +1493,25 @@ let rec alpha_renaming_b ((up, m) as s) f =
        && List.for_all2 (fun a b -> a==b) hyp hyp2 then f
     else {f with pp_desc = PPexists_named (lx, trs2, hyp2, ff1)}
 
+  | PPmatch(e, cases) ->
+    let e' = alpha_renaming_b s e in
+    let cases' =
+      List.map
+        (fun (p, e) -> alpha_renaming_b s p, alpha_renaming_b s e) cases
+        [@ocaml.ppwarning "TODO: detect when there are no changes"]
+    in
+    { f with pp_desc = PPmatch(e', cases') }
+
+  | PPsharp(grded, f1, a) ->
+    let ff1 = alpha_renaming_b s f1 in
+    if f1 == ff1 then f
+    else {f with pp_desc = PPsharp(grded, ff1, a)}
+
+  | PPisConstr(f1, a) ->
+    let ff1 = alpha_renaming_b s f1 in
+    if f1 == ff1 then f
+    else {f with pp_desc = PPisConstr(ff1, a)}
+
 
 let alpha_renaming_b s f =
   try no_alpha_renaming_b s f; f
@@ -1619,6 +1705,10 @@ let rec mono_term {c = {tt_ty=tt_ty; tt_desc=tt_desc}; annot = id} =
       TTnamed (lbl, mono_term t)
     | TTite (cond, t1, t2) ->
       TTite (monomorphize_form cond, mono_term t1, mono_term t2)
+
+    | TTsharp (grded, t, lbl) ->
+      TTsharp (grded, mono_term t, lbl)
+
   in
   { c = {tt_ty = Ty.monomorphize tt_ty; tt_desc=tt_desc}; annot = id}
 
@@ -1632,6 +1722,7 @@ and monomorphize_atom tat =
     | TAlt tl -> TAlt (List.map mono_term tl)
     | TAdistinct tl -> TAdistinct (List.map mono_term tl)
     | TApred (t, negated) -> TApred (mono_term t, negated)
+    | TTisConstr (t, lbl) -> TTisConstr (mono_term t, lbl)
   in
   { tat with c = c }
 
@@ -1741,8 +1832,27 @@ let type_one_th_decl keep_triggers env e =
   | Goal(loc, _, _)
   | Predicate_def(loc,_,_,_)
   | Function_def(loc,_,_,_,_)
-  | TypeDecl(loc, _, _, _) ->
+  | TypeDecl ((loc, _, _, _)::_) ->
     error WrongDeclInTheory loc
+  | TypeDecl [] -> assert false
+
+let is_recursive_type s body =
+  match body with
+  | Abstract | Enum _ | Record _ -> false
+  | Algebraic cases ->
+    try
+      List.iter
+        (fun (_c, args_ty) ->
+           List.iter
+             (fun (_lbl, ty) ->
+                match ty with
+                | PPTexternal (_, n, _) when String.equal s n -> raise Exit
+                | _ -> ()
+             )args_ty
+        )cases;
+      false
+    with Exit ->
+      true
 
 
 let type_decl keep_triggers (acc, env) d =
@@ -1822,22 +1932,126 @@ let type_decl keep_triggers (acc, env) d =
       let td_a = { c = td; annot=new_id () } in
       (td_a, env)::acc, env
 
-    | TypeDecl(loc, ls, s, body) ->
+    | TypeDecl [loc, ls, s, body] when not (is_recursive_type s body) ->
       Options.tool_req 1 "TR-Typing-TypeDecl$_F$";
       let env1 = Env.add_type_decl env ls s body loc in
       let td1 =  TTypeDecl(loc, ls, s, body) in
       let td1_a = { c = td1; annot=new_id () } in
       let tls = List.map (fun s -> PPTvarid (s,loc)) ls in
-      let ty = PFunction([], PPTexternal(tls, s, loc)) in
-      match body with
-      | Enum lc ->
-        let lcl = List.map (fun c -> c, "") lc in (* TODO change this *)
-        let env2 = Env.add_logics env1 Symbols.constr lcl ty loc in
-        let td2 = TLogic(loc, lc, ty) in
-        let td2_a = { c = td2; annot=new_id () } in
-        (td1_a, env1)::(td2_a,env2)::acc, env2
-      | _ -> (td1_a, env1)::acc, env1
+      let pur_ty = PPTexternal(tls, s, loc) in
+      begin match body with
+        | Enum lc ->
+          let lcl = List.map (fun c -> c, "") lc in (* TODO change this *)
+          let ty = PFunction([], pur_ty) in
+          let env2 = Env.add_logics env1 Symbols.constr lcl ty loc in
+          let td2 = TLogic(loc, lc, ty) in
+          let td2_a = { c = td2; annot=new_id () } in
+          (td1_a, env1)::(td2_a,env2)::acc, env2
 
+        | Algebraic lc ->
+          let acc_z, env_z
+                [@ocaml.ppwarning "TODO: add projectors and testors \
+                                   for each constructor"]
+            =
+            List.fold_left
+              (fun (acc_x, env_x) (cstr, lbl_args_ty) ->
+                 let args_ty = List.map snd lbl_args_ty in
+                 let ty = PFunction(args_ty, pur_ty) in
+                 let env_y =
+                   Env.add_logics env_x Symbols.constr [cstr, ""]
+                     ty loc
+                 in
+                 let env_y = (* register destructors *)
+                   List.fold_left
+                     (fun env_y (lbl, ty_lbl) ->
+                        let ty = PFunction ([pur_ty], ty_lbl) in
+                        Env.add_logics
+                          env_y (Symbols.destruct ~guarded:true) [lbl, ""]
+                          ty loc
+                     )env_y lbl_args_ty
+                 in
+                 let td2 = TLogic(loc, [cstr], ty) in
+                 let td2_a = { c = td2; annot=new_id () } in
+                 let acc_y = (td2_a,env_y)::acc_x in
+                 acc_y, env_y
+              )(acc, env1) lc
+          in
+          (td1_a, env1)::acc_z, env_z
+
+        | _ -> (td1_a, env1)::acc, env1
+      end
+    | TypeDecl l
+        [@ocaml.ppwarning "TODO: quick ! dirty ! not correct ? approximation !"]
+      ->
+      let env
+          [@ocaml.ppwarning "add_type_decl 3 types to well initialize ?"]
+        =
+        List.fold_left
+          (fun env (loc, ls, s, body) ->
+             Env.add_type_decl env ls s Parsed.Abstract loc
+          )env l
+      in
+      let env =
+        List.fold_left
+          (fun env (loc, ls, s, body) ->
+             Env.add_type_decl ~recursive:true env ls s body loc
+          )env l
+      in
+      let acc, env =
+        List.fold_left
+          (fun (acc, env) (loc, ls, s, body) ->
+             let env1 = Env.add_type_decl ~recursive:true env ls s body loc in
+             let td1 =  TTypeDecl(loc, ls, s, body) in
+             let td1_a = { c = td1; annot=new_id () } in
+             (td1_a, env1)::acc, env1
+          )(acc, env) l
+      in
+      List.fold_left
+        (fun (acc, env1) (loc, ls, s, body) ->
+           let tls = List.map (fun s -> PPTvarid (s,loc)) ls in
+           let pur_ty = PPTexternal(tls, s, loc) in
+           begin match body with
+             | Enum lc ->
+               let lcl = List.map (fun c -> c, "") lc in (* TODO change this *)
+               let ty = PFunction([], pur_ty) in
+               let env2 = Env.add_logics env1 Symbols.constr lcl ty loc in
+               let td2 = TLogic(loc, lc, ty) in
+               let td2_a = { c = td2; annot=new_id () } in
+               (td2_a,env2)::acc, env2
+
+             | Algebraic lc ->
+               let acc_z, env_z
+                     [@ocaml.ppwarning "TODO: add projectors and testors \
+                                        for each constructor"]
+                 =
+                 List.fold_left
+                   (fun (acc_x, env_x) (cstr, lbl_args_ty) ->
+                      let args_ty = List.map snd lbl_args_ty in
+                      let ty = PFunction(args_ty, pur_ty) in
+                      let env_y =
+                        Env.add_logics env_x Symbols.constr [cstr, ""]
+                          ty loc
+                      in
+                      let env_y = (* register destructors *)
+                        List.fold_left
+                          (fun env_y (lbl, ty_lbl) ->
+                             let ty = PFunction ([pur_ty], ty_lbl) in
+                             Env.add_logics
+                               env_y (Symbols.destruct ~guarded:true) [lbl, ""]
+                               ty loc
+                          )env_y lbl_args_ty
+                      in
+                      let td2 = TLogic(loc, [cstr], ty) in
+                      let td2_a = { c = td2; annot=new_id () } in
+                      let acc_y = (td2_a,env_y)::acc_x in
+                      acc_y, env_y
+                   )(acc, env1) lc
+               in
+               acc_z, env_z
+
+             | _ -> acc, env1
+           end
+        )(acc, env) l
   with Warning(e,loc) ->
     Loc.report std_formatter loc;
     acc, env
@@ -1851,6 +2065,20 @@ let file ld =
         (fun acc d -> type_decl keep_triggers acc d)
         ([], env) ld
     in
+    if debug_adt () && debug () then begin
+      fprintf fmt "LOGICS@.";
+      MString.iter
+        (fun s (sy, p) ->
+           fprintf fmt "logic %s == %a : %a -> %a@.@."
+             s Symbols.print sy Ty.print_list p.Env.args Ty.print p.Env.result
+        )env.Env.logics;
+
+      fprintf fmt "TYPES@.";
+      MString.iter
+        (fun s ty ->
+           fprintf fmt "type %s == %a@.@." s Ty.print_full ty
+        )env.Env.types.Types.to_ty;
+    end;
     if type_only () then exit 0;
     let l = List.rev_map (fun (d, env) ->
         Triggers.make_decl keep_triggers d, env) ltd in

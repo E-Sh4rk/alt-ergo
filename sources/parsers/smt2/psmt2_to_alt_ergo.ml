@@ -71,10 +71,14 @@ module Translate = struct
       | TArray (t1,t2) -> mk_external_type sort.p [aux t1;aux t2] "farray"
       | TBitVec (n) -> assert false
       | TSort (s,t_list) -> mk_external_type sort.p (List.map aux t_list) s
-      | TDatatype (d,t_list) -> assert false
+      | TDatatype (d,t_list) ->
+        (* correct ? since we construct a parsed AST ? *)
+        mk_external_type sort.p (List.map aux t_list) d
       | TVar (s) -> mk_var_type sort.p s
       | TFun (t_list,t) -> assert false
       | TLink(t) -> assert false
+      | TRoundingMode -> assert false
+      | TFloatingPoint _ -> assert false
     in
     aux sort.ty
 
@@ -109,8 +113,7 @@ module Translate = struct
     | Const_Hex(s) -> mk_int_const loc s
     | Const_Bin(s) -> mk_int_const loc s
 
-  let translate_identifier id params raw_params =
-    let name = Smtlib_typed_env.get_identifier id in
+  let translate_string_identifier name params raw_params =
     match name.c with
     | "true" -> mk_true_const name.p
     | "false" -> mk_false_const name.p
@@ -183,6 +186,16 @@ module Translate = struct
         mk_var name.p name.c
       else
         mk_application name.p name.c params
+
+
+
+  let translate_identifier id params raw_params =
+    let name, l = Smtlib_typed_env.get_identifier id in
+    match name.c, l, params with
+    | _, [], _ -> translate_string_identifier name params raw_params
+    | "is", [constr], [e] ->
+      mk_algebraic_test name.p e constr
+    | _ -> assert false (* TODO. Handle others *)
 
   let translate_qual_identifier qid params raw_params=
     match qid.c with
@@ -281,6 +294,24 @@ module Translate = struct
       mk_non_ground_predicate_def  symb.p (symb.c,symb.c) params t_expr
     else mk_function_def symb.p (symb.c,symb.c) params ret t_expr
 
+  let translate_datatype_decl (name, _) (params, cases) =
+    let params = List.map (fun n -> n.c) params in
+    let cases =
+      List.map (fun (cons, d_l) ->
+          cons.c,
+          List.map (fun (des, sort) ->
+              des.c, translate_sort sort
+            )d_l
+        )cases
+    in
+    name.p, params, name.c, (Parsed.Algebraic cases)
+
+  let translate_datatypes sort_dec datatype_dec =
+    try
+      mk_rec_type_decl @@
+      List.map2 translate_datatype_decl sort_dec datatype_dec
+    with Invalid_argument _ -> assert false
+
   let not_supported s =
     Format.eprintf "; %S : Not yet supported@." s
 
@@ -298,8 +329,12 @@ module Translate = struct
       not_supported "check-sat-assuming"; assert false
     | Cmd_DeclareConst(symbol,const_dec) ->
       (translate_decl_fun symbol [] (translate_const_dec const_dec)) :: acc
-    | Cmd_DeclareDataType(symbol,datatype_dec) -> assert false
-    | Cmd_DeclareDataTypes(sort_dec_list,datatype_dec_list) -> assert false
+    | Cmd_DeclareDataType(symbol,datatype_dec) ->
+      (mk_rec_type_decl
+         [(translate_datatype_decl (symbol,0) datatype_dec)]) :: acc
+    | Cmd_DeclareDataTypes(sort_dec_list,datatype_dec_list) ->
+      (translate_datatypes sort_dec_list datatype_dec_list) :: acc
+
     | Cmd_DeclareFun(symbol,fun_dec) ->
       let params,ret = translate_fun_dec fun_dec in
       (translate_decl_fun symbol params ret):: acc
@@ -334,7 +369,7 @@ module Translate = struct
     | Cmd_Exit -> acc
 
   let init () =
-    if Smtlib_error.get_is_int_real () then
+    if Psmt2Frontend.Options.get_is_int_real () then
       let dummy_pos = Lexing.dummy_pos,Lexing.dummy_pos in
 
       (* assert false; *)

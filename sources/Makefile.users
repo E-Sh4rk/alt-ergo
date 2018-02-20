@@ -19,7 +19,7 @@ INCLUDES = $(NUMLIB) $(ZARITHLIB) $(LABLGTK2LIB)  $(CAMLZIPLIB) $(OCPLIBSIMPLEXL
 
 # TODO : enable these warnings one by one and fix the code
 
-WARNINGS= -w +A-45-27-4-9-44-32-48-41-6-22
+WARNINGS= -w +A-45-27-4-9-44-32-48-41-6
 
 # xxxx: Warning 22: user warnings
 # x6 : Warning 60: unused module MyNums. ==> pb with recursive modules
@@ -129,6 +129,7 @@ CMO-LIB = lib/util/config.cmo \
       lib/reasoners/bitv.cmo \
       lib/reasoners/arrays.cmo \
       lib/reasoners/enum.cmo \
+      lib/reasoners/adt.cmo \
       lib/reasoners/ite.cmo \
       lib/reasoners/combine.cmo \
       lib/reasoners/ccx.cmo \

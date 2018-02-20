@@ -347,6 +347,9 @@ let rec make_term up_qv inline_lets (defns:let_defns) abstr t =
       let t1 = mk_term defns t1 in
       let t2 = mk_term defns t2 in
       T.make (Sy.name "ite") [t_cond; t1; t2] ty
+
+    | TTsharp (b, t, s) ->
+      T.make (Sy.destruct ~guarded:b (Hstring.view s)) [mk_term defns t] ty
   in
   mk_term (defns:let_defns) t
 
@@ -481,6 +484,12 @@ and make_form up_qv inline_lets defns abstr name_base f loc =
                 in
                 F.mk_lit lit id
             end
+          | TTisConstr (t, lbl) ->
+            let lit =
+              A.LT.mk_builtin true (A.IsConstr lbl)
+                [make_term up_qv inline_lets defns abstr t]
+            in
+            F.mk_lit lit id
 
           | _ -> assert false
         in

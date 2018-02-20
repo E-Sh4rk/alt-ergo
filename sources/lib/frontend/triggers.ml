@@ -99,6 +99,7 @@ let rec depth_tterm t =
       (fun z (_, t1) -> max (depth_tterm t1 + 1)  z) (depth_tterm t2) l
   | TTnamed (_, t) | TTinInterval (t,_,_,_,_) | TTmapsTo(_,t) -> depth_tterm t
   | TTite(_, t1, t2) -> max (depth_tterm t1) (depth_tterm t2)
+  | TTsharp(_, t, _) -> 1 + depth_tterm t
 
 exception Out of int
 
@@ -243,6 +244,13 @@ let rec compare_tterm t1 t2 =
     if c <> 0 then c else compare_tterm s2 t2
   | TTite _, _ -> -1
   | _, TTite _ -> 1
+
+  | TTsharp(_, t1, a1), TTsharp(_, t2,a2) ->
+    let c = Pervasives.compare a1 a2 in
+    if c<>0 then c else
+      compare_tterm t1 t2
+  | TTsharp _, _ -> -1
+  | _, TTsharp _ -> 1
 
 
 let compare_tterm_list tl2 tl1 =
@@ -483,6 +491,11 @@ let underscore =
     | TTnamed (h,n) ->
       let n,b = aux n s in
       if b then t,true else mk_tt t (TTnamed (h,n)),false
+
+    | TTsharp(grded, d, h) ->
+      let d,b = aux d s in
+      if b then t,true else mk_tt t (TTsharp (grded, d,h)),false
+
   in
   fun bv ((t,vt,vty) as e) ->
     let s = Vterm.diff vt bv in
@@ -570,6 +583,7 @@ let rec vars_of_term bv acc t = match t.c.tt_desc with
     in
     vars_of_term bv acc e
   | TTite (_, t1, t2) -> List.fold_left (vars_of_term bv) acc [t1;t2]
+  | TTsharp (_, t1, _) -> vars_of_term bv acc t1
 
 let underscoring_term mvars underscores t =
   let rec under_rec t =
@@ -666,6 +680,7 @@ let rec contains_ite t = match t.c.tt_desc with
 
   | TTnamed (_, t)
   | TTdot (t, _)
+  | TTsharp (_, t, _)
   | TTmapsTo (_, t)
   | TTprefix (_, t) -> contains_ite t
 
@@ -754,7 +769,7 @@ let potential_triggers =
         List.fold_left (potential_rec vars)
           (STRS.add (t, bv_lf, vty_lf) acc) [t1;t2]
       else acc
-    | TTdot (t1 , a) ->
+    | TTdot (t1 , a) | TTsharp (_, t1 , a) ->
       let vty_lf = vty_term vty_t t1 in
       let bv_lf = vars_of_term bv Vterm.empty t1 in
       if as_bv bv bv_lf || as_tyv vty vty_lf then

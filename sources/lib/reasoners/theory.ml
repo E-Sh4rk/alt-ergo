@@ -133,11 +133,15 @@ module Main_Default : S = struct
              Hstring.Map.add hs (Text(l, hs)) mp
 
            | Tsum (hs, l) ->
-             Hstring.Map.add hs (Tsum(hs, l)) mp
+             Hstring.Map.add hs ty mp
 
            | Trecord {args; name; lbs} ->
              (* cannot do better for records ? *)
              Hstring.Map.add name ty mp
+
+           | Tadt (hs, _, _) ->
+             (* cannot do better for ADT ? *)
+             Hstring.Map.add hs ty mp
         )sty Hstring.Map.empty
 
     let print_types_decls types =
@@ -170,6 +174,8 @@ module Main_Default : S = struct
                         (Hstring.view lbl) Ty.print ty) l;
                  fprintf fmt " }@."
              end
+           | Tadt _ [@ocaml.ppwarning "TODO: print ADTs"] ->
+             assert false
         )types;
       fprintf fmt "@."
 
@@ -228,6 +234,7 @@ module Main_Default : S = struct
     let theory_of k = match k with
       | Th_arith  -> "Th_arith "
       | Th_sum    -> "Th_sum   "
+      | Th_adt    -> "Th_adt   "
       | Th_arrays -> "Th_arrays"
       | Th_UF -> "Th_UF"
 

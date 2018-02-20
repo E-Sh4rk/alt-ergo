@@ -54,6 +54,9 @@ module rec CX : sig
   val extract6 : r -> X6.t option
   val embed6 : X6.t -> r
 
+  val extract7 : r -> X7.t option
+  val embed7 : X7.t -> r
+
 end =
 struct
 
@@ -66,6 +69,7 @@ struct
     | X4    of X4.t
     | X5    of X5.t
     | X6    of X6.t
+    | X7    of X7.t
 
   type r = {v : rview ; id : int}
 
@@ -79,14 +83,15 @@ struct
 
     let hash r =
       let res = match r.v with
-        | X1 x   -> 1 + 9 * X1.hash x
-        | X2 x   -> 2 + 9 * X2.hash x
-        | X3 x   -> 3 + 9 * X3.hash x
-        | X4 x   -> 4 + 9 * X4.hash x
-        | X5 x   -> 5 + 9 * X5.hash x
-        | X6 x   -> 6 + 9 * X6.hash x
-        | Ac ac  -> 8 + 9 * AC.hash ac
-        | Term t -> 7 + 9 * Term.hash t
+        | X1 x   -> 1 + 10 * X1.hash x
+        | X2 x   -> 2 + 10 * X2.hash x
+        | X3 x   -> 3 + 10 * X3.hash x
+        | X4 x   -> 4 + 10 * X4.hash x
+        | X5 x   -> 5 + 10 * X5.hash x
+        | X6 x   -> 6 + 10 * X6.hash x
+        | X7 x   -> 7 + 10 * X7.hash x
+        | Ac ac  -> 9 + 10 * AC.hash ac
+        | Term t -> 8 + 10 * Term.hash t
       in
       abs res
 
@@ -98,6 +103,7 @@ struct
       | X4 x, X4 y -> X4.equal x y
       | X5 x, X5 y -> X5.equal x y
       | X6 x, X6 y -> X6.equal x y
+      | X7 x, X7 y -> X7.equal x y
       | Term x  , Term y  -> Term.equal x y
       | Ac x    , Ac    y -> AC.equal x y
       | _ -> false
@@ -120,6 +126,7 @@ struct
   let embed4 x = hcons {v = X4 x; id = -1000 (* dummy *)}
   let embed5 x = hcons {v = X5 x; id = -1000 (* dummy *)}
   let embed6 x = hcons {v = X6 x; id = -1000 (* dummy *)}
+  let embed7 x = hcons {v = X7 x; id = -1000 (* dummy *)}
 
   let ac_embed ({Sig.l = l} as t) =
     match l with
@@ -139,6 +146,7 @@ struct
   let extract4 = function {v=X4 r} -> Some r | _ -> None
   let extract5 = function {v=X5 r} -> Some r | _ -> None
   let extract6 = function {v=X6 r} -> Some r | _ -> None
+  let extract7 = function {v=X7 r} -> Some r | _ -> None
 
   let ac_extract = function
     | {v = Ac t}   -> Some t
@@ -152,6 +160,7 @@ struct
     | X4 _ -> X4.term_extract r
     | X5 _ -> X5.term_extract r
     | X6 _ -> X6.term_extract r
+    | X7 _ -> X7.term_extract r
     | Ac _ -> None, false (* SYLVAIN : TODO *)
     | Term t -> Some t, true
 
@@ -169,6 +178,7 @@ struct
       | X4 x -> X4.type_info x
       | X5 x -> X5.type_info x
       | X6 x -> X6.type_info x
+      | X7 x -> X7.type_info x
       | Term t -> (Term.view t).Term.ty
       | Ac x -> AC.type_info x
     in
@@ -181,6 +191,7 @@ struct
     | {v=X4 t}   -> X4.type_info t
     | {v=X5 t}   -> X5.type_info t
     | {v=X6 t}   -> X6.type_info t
+    | {v=X7 t}   -> X7.type_info t
     | {v=Ac x}   -> AC.type_info x
     | {v=Term t} -> let {Term.ty = ty} = Term.view t in ty
 
@@ -194,6 +205,7 @@ struct
     | X4 _    -> -6
     | X5 _    -> -7
     | X6 _    -> -8
+    | X7 _    -> -9
 
   let compare_tag a b = theory_num a - theory_num b
 
@@ -207,6 +219,7 @@ struct
       | X4 x, X4 y -> X4.compare a b
       | X5 x, X5 y -> X5.compare a b
       | X6 x, X6 y -> X6.compare a b
+      | X7 x, X7 y -> X7.compare a b
       | Term x  , Term y  -> Term.compare x y
       | Ac x    , Ac    y -> AC.compare x y
       | va, vb            -> compare_tag va vb
@@ -253,6 +266,7 @@ struct
     | X4 t -> X4.leaves t
     | X5 t -> X5.leaves t
     | X6 t -> X6.leaves t
+    | X7 t -> X7.leaves t
     | Ac t -> r :: (AC.leaves t)
     | Term _ -> [r]
 
@@ -265,58 +279,73 @@ struct
       | X4 t   -> X4.subst p v t
       | X5 t   -> X5.subst p v t
       | X6 t   -> X6.subst p v t
+      | X7 t   -> X7.subst p v t
       | Ac t   -> if equal p r then v else AC.subst p v t
       | Term _ -> if equal p r then v else r
 
   let make t =
-    let {Term.f=sb} = Term.view t in
+    let {Term.f=sb; ty} = Term.view t in
     match
-      X1.is_mine_symb sb,
-      not (restricted ()) && X2.is_mine_symb sb,
-      not (restricted ()) && X3.is_mine_symb sb,
-      not (restricted ()) && X4.is_mine_symb sb,
-      not (restricted ()) && X5.is_mine_symb sb,
-      not (restricted ()) && X6.is_mine_symb sb,
-      AC.is_mine_symb sb
+      X1.is_mine_symb sb ty,
+      not (restricted ()) && X2.is_mine_symb sb ty,
+      not (restricted ()) && X3.is_mine_symb sb ty,
+      not (restricted ()) && X4.is_mine_symb sb ty,
+      not (restricted ()) && X5.is_mine_symb sb ty,
+      not (restricted ()) && X6.is_mine_symb sb ty,
+      not (restricted ()) && X7.is_mine_symb sb ty,
+      AC.is_mine_symb sb ty
     with
-    | true  , false , false, false, false, false, false -> X1.make t
-    | false , true  , false, false, false, false, false -> X2.make t
-    | false , false , true , false, false, false, false -> X3.make t
-    | false , false , false, true , false, false, false -> X4.make t
-    | false , false , false, false, true , false, false -> X5.make t
-    | false , false , false, false, false, true , false -> X6.make t
-    | false , false , false, false, false, false, true  -> AC.make t
-    | false , false , false, false, false, false, false -> term_embed t, []
+    | true  , false , false , false, false, false, false, false -> X1.make t
+    | false , true  , false , false, false, false, false, false -> X2.make t
+    | false , false , true  , false, false, false, false, false -> X3.make t
+    | false , false , false , true , false, false, false, false -> X4.make t
+    | false , false , false , false, true , false, false, false -> X5.make t
+    | false , false , false , false, false, true , false, false -> X6.make t
+    | false , false , false , false, false, false, true , false -> X7.make t
+    | false , false , false , false, false, false, false, true  -> AC.make t
+    | false , false , false , false, false, false, false, false ->
+      term_embed t, []
     | _ -> assert false
 
-  let fully_interpreted sb =
+  let fully_interpreted sb ty =
     match
-      X1.is_mine_symb sb,
-      not (restricted ()) && X2.is_mine_symb sb,
-      not (restricted ()) && X3.is_mine_symb sb,
-      not (restricted ()) && X4.is_mine_symb sb,
-      not (restricted ()) && X5.is_mine_symb sb,
-      not (restricted ()) && X6.is_mine_symb sb,
-      AC.is_mine_symb sb
+      X1.is_mine_symb sb ty,
+      not (restricted ()) && X2.is_mine_symb sb ty,
+      not (restricted ()) && X3.is_mine_symb sb ty,
+      not (restricted ()) && X4.is_mine_symb sb ty,
+      not (restricted ()) && X5.is_mine_symb sb ty,
+      not (restricted ()) && X6.is_mine_symb sb ty,
+      not (restricted ()) && X7.is_mine_symb sb ty,
+      AC.is_mine_symb sb ty
     with
-    | true , false ,false,false,false,false,false -> X1.fully_interpreted sb
-    | false, true  ,false,false,false,false,false -> X2.fully_interpreted sb
-    | false, false ,true ,false,false,false,false -> X3.fully_interpreted sb
-    | false, false ,false,true ,false,false,false -> X4.fully_interpreted sb
-    | false, false ,false,false,true ,false,false -> X5.fully_interpreted sb
-    | false, false ,false,false,false,true ,false -> X6.fully_interpreted sb
-    | false, false ,false,false,false,false,true  -> AC.fully_interpreted sb
-    | false, false ,false,false,false,false,false -> false
+    | true  , false , false , false, false, false, false, false ->
+      X1.fully_interpreted sb
+    | false , true  , false , false, false, false, false, false ->
+      X2.fully_interpreted sb
+    | false , false , true  , false, false, false, false, false ->
+      X3.fully_interpreted sb
+    | false , false , false , true , false, false, false, false ->
+      X4.fully_interpreted sb
+    | false , false , false , false, true , false, false, false ->
+      X5.fully_interpreted sb
+    | false , false , false , false, false, true , false, false ->
+      X6.fully_interpreted sb
+    | false , false , false , false, false, false, true , false ->
+      X7.fully_interpreted sb
+    | false , false , false , false, false, false, false, true  ->
+      AC.fully_interpreted sb
+    | false , false , false , false, false, false, false, false ->
+      false
     | _ -> assert false
 
-  let is_solvable_theory_symbol sb =
-    X1.is_mine_symb sb ||
+  let is_solvable_theory_symbol sb ty =
+    X1.is_mine_symb sb ty ||
     not (restricted ()) &&
     ((*X2.is_mine_symb sb || print records*)
-      X3.is_mine_symb sb ||
-      X4.is_mine_symb sb ||
-      X5.is_mine_symb sb)(* ||
-                            AC.is_mine_symb sb*)
+      X3.is_mine_symb sb ty ||
+      X4.is_mine_symb sb ty ||
+      X5.is_mine_symb sb ty)(* ||
+                               AC.is_mine_symb sb*)
 
 
   let is_a_leaf r = match r.v with
@@ -329,19 +358,21 @@ struct
     | [r,1] -> r
     | _ ->
       match
-        X1.is_mine_symb ac.Sig.h,
-        X2.is_mine_symb ac.Sig.h,
-        X3.is_mine_symb ac.Sig.h,
-        X4.is_mine_symb ac.Sig.h,
-        X5.is_mine_symb ac.Sig.h,
-        X6.is_mine_symb ac.Sig.h,
-        AC.is_mine_symb ac.Sig.h with
-      | true  , false , false, false, false, false, false -> X1.color ac
-      | false , true  , false, false, false, false, false -> X2.color ac
-      | false , false , true , false, false, false, false -> X3.color ac
-      | false , false , false, true , false, false, false -> X4.color ac
-      | false , false , false, false, true,  false, false -> X5.color ac
-      | false , false , false, false, false, true,  false -> X6.color ac
+        X1.is_mine_symb ac.Sig.h ac.Sig.t,
+        X2.is_mine_symb ac.Sig.h ac.Sig.t,
+        X3.is_mine_symb ac.Sig.h ac.Sig.t,
+        X4.is_mine_symb ac.Sig.h ac.Sig.t,
+        X5.is_mine_symb ac.Sig.h ac.Sig.t,
+        X6.is_mine_symb ac.Sig.h ac.Sig.t,
+        X7.is_mine_symb ac.Sig.h ac.Sig.t,
+        AC.is_mine_symb ac.Sig.h ac.Sig.t with
+      | true  , false , false , false, false, false, false, false -> X1.color ac
+      | false , true  , false , false, false, false, false, false -> X2.color ac
+      | false , false , true  , false, false, false, false, false -> X3.color ac
+      | false , false , false , true , false, false, false, false -> X4.color ac
+      | false , false , false , false, true , false, false, false -> X5.color ac
+      | false , false , false , false, false, true , false, false -> X6.color ac
+      | false , false , false , false, false, false, true , false -> X7.color ac
       (*AC.is_mine may say F if Options.no_ac is set to F dynamically *)
       | _  -> ac_embed ac
 
@@ -358,6 +389,7 @@ struct
         | X4 t    -> fprintf fmt "%a" X4.print t
         | X5 t    -> fprintf fmt "%a" X5.print t
         | X6 t    -> fprintf fmt "%a" X6.print t
+        | X7 t    -> fprintf fmt "%a" X7.print t
         | Term t  -> fprintf fmt "%a" Term.print t
         | Ac t    -> fprintf fmt "%a" AC.print t
       else
@@ -368,6 +400,7 @@ struct
         | X4 t    -> fprintf fmt "X4(%s):[%a]" X4.name X4.print t
         | X5 t    -> fprintf fmt "X5(%s):[%a]" X5.name X5.print t
         | X6 t    -> fprintf fmt "X6(%s):[%a]" X6.name X6.print t
+        | X7 t    -> fprintf fmt "X7(%s):[%a]" X7.name X7.print t
         | Term t  -> fprintf fmt "FT:[%a]" Term.print t
         | Ac t    -> fprintf fmt "Ac:[%a]" AC.print t
 
@@ -432,6 +465,7 @@ struct
     | X4 a   -> X4.abstract_selectors a acc
     | X5 a   -> X5.abstract_selectors a acc
     | X6 a   -> X6.abstract_selectors a acc
+    | X7 a   -> X7.abstract_selectors a acc
     | Term _ -> a, acc
     | Ac a   -> AC.abstract_selectors a acc
 
@@ -468,7 +502,9 @@ struct
       List.filter (fun (p,v) ->
           match p.v with
           | Ac _ -> true | Term _ -> SX.mem p original
-          | _ -> assert false
+          | _ ->
+            Format.eprintf "Ici: %a@." CX.print p;
+            assert false
         )sbs
     in
     Debug.print_sbt "Triangular and cleaned" sbs;
@@ -509,6 +545,7 @@ struct
           | Ty.Tbitv _         -> X3.solve ra rb pb
           | Ty.Tsum _          -> X5.solve ra rb pb
           (*| Ty.Tunit           -> pb *)
+          | Ty.Tadt _          -> X6.solve ra rb pb
           | _                  -> solve_uninterpreted ra rb pb
         in
         solve_list pb
@@ -526,14 +563,16 @@ struct
     | _ -> make_idemp oa ob (List.rev_append sbt sbt')
 
   let solve  a b =
-    let a', b', acc = abstract_equality a b in
-    let sbs = solve_abstracted a b a' b' acc in
-    List.fast_sort
-      (fun (p1, _) (p2, _) ->
-         let c = CX.str_cmp p2 p1 in
-         assert (c <> 0);
-         c
-      )sbs
+    if CX.equal a b then []
+    else
+      let a', b', acc = abstract_equality a b in
+      let sbs = solve_abstracted a b a' b' acc in
+      List.fast_sort
+        (fun (p1, _) (p2, _) ->
+           let c = CX.str_cmp p2 p1 in
+           assert (c <> 0);
+           c
+        )sbs
 
   let assign_value r distincts eq =
     let opt = match r.v, type_info r with
@@ -543,6 +582,7 @@ struct
       | _, Ty.Tbitv _   -> X3.assign_value r distincts eq
       | _, Ty.Tfarray _ -> X4.assign_value r distincts eq
       | _, Ty.Tsum _    -> X5.assign_value r distincts eq
+      | _, Ty.Tadt _    -> X6.assign_value r distincts eq
       | Term t, ty      ->
         if (Term.view t).Term.depth = 1 ||
            List.exists (fun (t,_) -> (Term.view t).Term.depth = 1) eq then None
@@ -565,6 +605,7 @@ struct
       | Ty.Treal     -> X1.choose_adequate_model t rep l
       | Ty.Tbitv _   -> X3.choose_adequate_model t rep l
       | Ty.Tsum _    -> X5.choose_adequate_model t rep l
+      | Ty.Tadt _    -> X6.choose_adequate_model t rep l
       | Ty.Trecord _ -> X2.choose_adequate_model t rep l
       | Ty.Tfarray _ -> X4.choose_adequate_model t rep l
       | _            ->
@@ -666,12 +707,22 @@ and X5 : Sig.SHOSTAK
 
 and X6 : Sig.SHOSTAK
   with type r = CX.r
-   and type t = CX.r Ite.abstract =
-  Ite.Shostak
+   and type t = CX.r Adt.abstract =
+  Adt.Shostak
     (struct
       include CX
       let extract = extract6
       let embed = embed6
+    end)
+
+and X7 : Sig.SHOSTAK
+  with type r = CX.r
+   and type t = CX.r Ite.abstract =
+  Ite.Shostak
+    (struct
+      include CX
+      let extract = extract7
+      let embed = embed7
     end)
 
 (* Its signature is not Sig.SHOSTAK because it does not provide a solver *)
@@ -737,11 +788,20 @@ module Rel5 : Sig.RELATION
 
 module Rel6 : Sig.RELATION
   with type r = CX.r and type uf = Uf.t =
-  Ite.Relation
+  Adt.Relation
     (struct
       include CX
       let extract = extract6
       let embed = embed6
+    end)(Uf)
+
+module Rel7 : Sig.RELATION
+  with type r = CX.r and type uf = Uf.t =
+  Ite.Relation
+    (struct
+      include CX
+      let extract = extract7
+      let embed = embed7
     end)(Uf)
 
 
@@ -756,6 +816,7 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     r4: Rel4.t;
     r5: Rel5.t;
     r6: Rel6.t;
+    r7: Rel7.t;
   }
 
   let empty classes = {
@@ -765,6 +826,7 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     r4=Rel4.empty classes;
     r5=Rel5.empty classes;
     r6=Rel6.empty classes;
+    r7=Rel7.empty classes;
   }
 
   let (|@|) l1 l2 =
@@ -786,9 +848,11 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
       Rel5.assume env.r5 uf sa in
     let env6, { assume = a6; remove = rm6} =
       Rel6.assume env.r6 uf sa in
-    {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6},
-    { assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6;
-      remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6;}
+    let env7, { assume = a7; remove = rm7} =
+      Rel7.assume env.r7 uf sa in
+    {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7},
+    { assume = a1 |@| a2 |@| a3 |@| a4 |@| a5 |@| a6 |@| a7;
+      remove = rm1 |@| rm2 |@| rm3 |@| rm4 |@| rm5 |@| rm6 |@| rm7}
 
   let assume_th_elt env th_elt dep =
     Options.exec_thread_yield ();
@@ -798,7 +862,8 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     let env4 = Rel4.assume_th_elt env.r4 th_elt dep in
     let env5 = Rel5.assume_th_elt env.r5 th_elt dep in
     let env6 = Rel6.assume_th_elt env.r6 th_elt dep in
-    {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6}
+    let env7 = Rel7.assume_th_elt env.r7 th_elt dep in
+    {r1=env1; r2=env2; r3=env3; r4=env4; r5=env5; r6=env6; r7=env7}
 
   let query env uf a =
     Options.exec_thread_yield ();
@@ -816,7 +881,10 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
           | No ->
             match Rel5.query env.r5 uf a with
             | Yes _ as ans -> ans
-            | No -> Rel6.query env.r6 uf a
+            | No ->
+              match Rel6.query env.r6 uf a with
+              | Yes _ as ans -> ans
+              | No -> Rel7.query env.r7 uf a
 
   let case_split env uf ~for_model =
     Options.exec_thread_yield ();
@@ -826,7 +894,8 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     let seq4 = Rel4.case_split env.r4 uf for_model in
     let seq5 = Rel5.case_split env.r5 uf for_model in
     let seq6 = Rel6.case_split env.r6 uf for_model in
-    let l = seq1 |@| seq2 |@| seq3 |@| seq4 |@| seq5 |@| seq6 in
+    let seq7 = Rel7.case_split env.r7 uf for_model in
+    let l = seq1 |@| seq2 |@| seq3 |@| seq4 |@| seq5 |@| seq6 |@| seq7 in
     List.sort
       (fun (_,_,sz1) (_,_,sz2) ->
          match sz1, sz2 with
@@ -843,6 +912,7 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
      r4=Rel4.add env.r4 uf r t;
      r5=Rel5.add env.r5 uf r t;
      r6=Rel6.add env.r6 uf r t;
+     r7=Rel7.add env.r7 uf r t;
     }
 
 
@@ -860,8 +930,10 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
       Rel5.instantiate ~do_syntactic_matching t_match env.r5 uf selector in
     let r6, l6 =
       Rel6.instantiate ~do_syntactic_matching t_match env.r6 uf selector in
-    {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6},
-    l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
+    let r7, l7 =
+      Rel7.instantiate ~do_syntactic_matching t_match env.r7 uf selector in
+    {r1=r1; r2=r2; r3=r3; r4=r4; r5=r5; r6=r6; r7=r7},
+    l7 |@| l6 |@| l5 |@| l4 |@| l3 |@| l2 |@| l1
 
   let print_model fmt env rs =
     Rel1.print_model fmt env.r1 rs;
@@ -869,7 +941,8 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     Rel3.print_model fmt env.r3 rs;
     Rel4.print_model fmt env.r4 rs;
     Rel5.print_model fmt env.r5 rs;
-    Rel6.print_model fmt env.r6 rs
+    Rel6.print_model fmt env.r6 rs;
+    Rel7.print_model fmt env.r7 rs
 
   let new_terms env =
     let t1 = Rel1.new_terms env.r1 in
@@ -878,11 +951,13 @@ module Relation : Sig.RELATION with type r = CX.r and type uf = Uf.t = struct
     let t4 = Rel4.new_terms env.r4 in
     let t5 = Rel5.new_terms env.r5 in
     let t6 = Rel6.new_terms env.r6 in
+    let t7 = Rel7.new_terms env.r7 in
     Term.Set.union t1
       (Term.Set.union t2
          (Term.Set.union t3
             (Term.Set.union t4
-               (Term.Set.union t5 t6) )))
+               (Term.Set.union t5
+                  (Term.Set.union t6 t7)) )))
 
 end
 

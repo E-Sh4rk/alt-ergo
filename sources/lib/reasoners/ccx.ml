@@ -240,7 +240,7 @@ module Main : S = struct
   let congruents env facts t1 s =
     match T.view t1 with
     | {T.xs=[]} -> ()
-    | {T.f} when X.fully_interpreted f -> ()
+    | {T.f; ty} when X.fully_interpreted f ty -> ()
     | _ -> SetT.iter (equal_only_by_congruence env facts t1) s
 
 
@@ -555,7 +555,8 @@ module Main : S = struct
       Util.MI.fold
         (fun _ x acc ->
            let y, ex = Uf.find_r uf x in (*use terms ? *)
-           (LR.mkv_eq x y, None, ex, Sig.Subst) :: acc)
+           (* PB Here: LR.mkv_eq may swap x and y *)
+           ((*LR.mkv_eq x y*) A.Eq(x, y), None, ex, Sig.Subst) :: acc)
         facts.touched acc
     in
     facts.touched <- Util.MI.empty;

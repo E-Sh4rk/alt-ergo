@@ -37,6 +37,7 @@ type instances = (Formula.t list * Formula.gformula * Explanation.t) list
 type theory =
   | Th_arith
   | Th_sum
+  | Th_adt
   | Th_arrays
   | Th_UF
 
@@ -106,8 +107,8 @@ module type SHOSTAK = sig
   (** Name of the theory*)
   val name : string
 
-  (** return true if the symbol is owned by the theory*)
-  val is_mine_symb : Symbols.t -> bool
+  (** return true if the symbol and the type are owned by the theory*)
+  val is_mine_symb : Symbols.t -> Ty.t -> bool
 
   (** Give a representant of a term of the theory*)
   val make : Term.t -> r * Literal.LT.t list
@@ -186,7 +187,7 @@ module type X = sig
 
   val color : (r ac) -> r
 
-  val fully_interpreted : Symbols.t -> bool
+  val fully_interpreted : Symbols.t -> Ty.t -> bool
 
   val is_a_leaf : r -> bool
 
@@ -197,7 +198,7 @@ module type X = sig
   val top : unit -> r
   val bot : unit -> r
 
-  val is_solvable_theory_symbol : Symbols.t -> bool
+  val is_solvable_theory_symbol : Symbols.t -> Ty.t -> bool
 
   (* the returned bool is true when the returned term in a constant of the
      theory. Otherwise, the term contains aliens that should be assigned

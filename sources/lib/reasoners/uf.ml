@@ -1214,7 +1214,7 @@ module Make (X : Sig.X) : S with type r = X.r = struct
         MapT.fold
           (fun t mk ((fprofs, cprofs, carrays, mrepr) as acc) ->
              let {T.f; xs; ty} = T.view t in
-             if X.is_solvable_theory_symbol f
+             if X.is_solvable_theory_symbol f ty
              || T.is_fresh t || T.is_fresh_skolem t
              || T.equal t T.vrai || T.equal t T.faux
              then

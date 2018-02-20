@@ -1,0 +1,18 @@
+type t = A of {c1 : int} | B of {c2 : bool ; c3 : bool}
+
+type 'a u
+
+type 'a s = X of {d1 : 'a} | Y of {d2 : real ; d3 : int ; d4 : 'a u}
+
+logic y : t
+
+logic f : t -> 'a s
+
+axiom a:
+   forall x : 'a. x = y
+
+axiom b :
+forall x : 'a.
+ f(x) = f(y)
+
+goal g: false
