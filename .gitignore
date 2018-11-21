@@ -1,6 +1,7 @@
 .depend
 .gitignore
 META
+_obuild/
 alt-ergo/Makefile.configurable
 Makefile.configurable
 config.status

@@ -1,0 +1,99 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the Apache Software        *)
+(*     License version 2.0                                                    *)
+(*                                                                            *)
+(******************************************************************************)
+
+OCaml.library("alt-ergo-lib",
+  ocaml + {
+    (* archive = "alt-ergo"; *)
+    sort = true;
+    requires = [
+      "num";
+      "str";
+      "zarith";
+      "camlzip";
+      "dynlink";
+      "ocplib-simplex";
+    ];
+    files = [
+      (* Frontend *)
+      "frontend/cnf.ml";
+      "frontend/frontend.ml";
+      "frontend/parsed_interface.ml";
+      "frontend/triggers.ml";
+      "frontend/typechecker.ml";
+
+      (* Reasoners *)
+      "reasoners/ac.ml";
+      "reasoners/arith.ml";
+      "reasoners/arrays.ml";
+      "reasoners/bitv.ml";
+      "reasoners/ccx.ml";
+      "reasoners/combine.ml";
+      "reasoners/enum.ml";
+      "reasoners/fun_sat.ml";
+      "reasoners/inequalities.ml";
+      "reasoners/instances.ml";
+      "reasoners/intervalCalculus.ml";
+      "reasoners/intervals.ml";
+      "reasoners/ite.ml";
+      "reasoners/matching.ml";
+      "reasoners/matching_types.mli";
+      "reasoners/polynome.ml";
+      "reasoners/records.ml";
+      "reasoners/satml_frontend_hybrid.ml";
+      "reasoners/satml_frontend.ml";
+      "reasoners/satml.ml";
+      "reasoners/sat_solver.ml";
+      "reasoners/sat_solver_sig.ml";
+      "reasoners/sig.mli";
+      "reasoners/theory.ml";
+      "reasoners/uf.ml";
+      "reasoners/use.ml";
+
+      (* Structures *)
+      "structures/commands.ml";
+      "structures/errors.ml";
+      "structures/exception.ml";
+      "structures/explanation.ml";
+      "structures/formula.ml";
+      "structures/fpa_rounding.ml";
+      "structures/literal.ml";
+      "structures/parsed.ml";
+      "structures/profiling.ml";
+      "structures/satml_types.ml";
+      "structures/symbols.ml";
+      "structures/term.ml";
+      "structures/tliteral.ml";
+      "structures/ty.ml";
+      "structures/typed.ml";
+
+      (* Util / misc *)
+      "util/config.ml";
+      "util/emap.ml";
+      "util/gc_debug.ml";
+      "util/hconsing.ml";
+      "util/hstring.ml";
+      "util/iheap.ml";
+      "util/lists.ml";
+      "util/loc.ml";
+      "util/myDynlink.ml";
+      "util/myUnix.ml";
+      "util/myZip.ml";
+      "util/numbers.ml";
+      "util/numsNumbers.ml";
+      "util/numbersInterface.mli";
+      "util/options.ml";
+      "util/timers.ml";
+      "util/util.ml";
+      "util/vec.ml";
+      "util/version.ml";
+      "util/zarithNumbers.ml";
+    ];
+  });
+

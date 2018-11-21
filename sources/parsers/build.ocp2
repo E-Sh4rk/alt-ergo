@@ -1,0 +1,35 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the Apache Software        *)
+(*     License version 2.0                                                    *)
+(*                                                                            *)
+(******************************************************************************)
+
+ocamlyacc = "menhir";
+
+OCaml.library("alt-ergo-parsers",
+  ocaml + {
+    sort = true;
+    requires = [
+      "dynlink";
+      "alt-ergo-lib";
+      "psmt2-frontend";
+    ];
+    files = [
+      (* Common *)
+      "common/cmdline_parser.ml";
+      "common/parsers.ml";
+      "common/parsers_loader.ml";
+
+      (* PSMT2 *)
+      "smt2/psmt2_to_alt_ergo.ml";
+
+      (* Why *)
+      "why/why_lexer.mll";
+      "why/why_parser.mly", {ocamlyacc = "menhir"};
+    ];
+  });
+
