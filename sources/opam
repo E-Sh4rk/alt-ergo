@@ -1,0 +1,40 @@
+(**************************************************************)
+(*                                                            *)
+(*      This file is managed by ocp-autoconf                  *)
+(*  Remove it from `manage_files` in 'ocp-autoconf.config'    *)
+(*  if you want to modify it manually (or use 'opam.trailer') *)
+(*                                                            *)
+(**************************************************************)
+
+opam-version: "1.2"
+maintainer: "OCamlPro <alt-ergo@ocamlpro.com>"
+authors: [
+  "Alt-Ergo developers"
+]
+homepage: "http://alt-ergo.ocamlpro.com/"
+dev-repo: "https://github.com/OCamlPro/alt-ergo.git"
+bug-reports: "https://github.com/OCamlPro/alt-ergo/issues"
+build: [
+  [     "./configure"
+    "--prefix"
+    "%{prefix}%"
+    "--mandir"
+    "%{man}%"
+  ]
+  [ make ]
+]
+install: [
+  [ make "install" ]
+]
+remove: [
+]
+available: [ocaml-version >= "4.04.0"]
+depends: [
+     "camlzip"
+     "num"
+     "ocamlfind"
+     "ocp-build"
+     "ocplib-simplex" {>= "0.4" }
+     "psmt2-frontend" {>= "0.1" }
+     "zarith"
+]

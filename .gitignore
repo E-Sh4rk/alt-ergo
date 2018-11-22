@@ -1,7 +1,6 @@
 .depend
 .gitignore
 META
-_obuild/
 alt-ergo/Makefile.configurable
 Makefile.configurable
 config.status
@@ -38,6 +37,7 @@ alt-ergo/tmp/
 *.cmti
 *.conflicts
 *.automaton
+**/_obuild
 sources/lib/util/config.ml
 sources/parsers/why/why_lexer.ml
 sources/parsers/why/why_parser.ml
