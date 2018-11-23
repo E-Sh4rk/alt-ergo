@@ -201,25 +201,6 @@ OPAM_REPO=
 OPAM_REPO_OFFICIAL_REMOTE=
 OPAM_REPO_FORK_REMOTE=
 DOWNLOAD_URL_PREFIX=http://github.com/OCamlPro/alt-ergo/archive/
-
-###############################################################
-##                                                            #
-## From autoconf.ac:                                          #
-##                                                            #
-###############################################################
-
-
-# This file will be inserted inside autoconf/configure.ac by ocp-autoconf
-# If you create variables, do not forget to add them in ocp-autoconf.config
-# in the 'extra_config_vars' and 'extra_bool_vars' options.
-
-
-###############################################################
-##                                                            #
-## END of autoconf.ac                                         #
-##                                                            #
-###############################################################
-
 AC_SUBST(OCAMLFIND)
 AC_SUBST(PROJECTURE_ARGS)
 AC_SUBST(ROOTDIR)

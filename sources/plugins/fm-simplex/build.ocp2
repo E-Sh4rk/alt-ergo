@@ -1,0 +1,23 @@
+(******************************************************************************)
+(*                                                                            *)
+(*     Alt-Ergo: The SMT Solver For Software Verification                     *)
+(*     Copyright (C) 2013-2018 --- OCamlPro SAS                               *)
+(*                                                                            *)
+(*     This file is distributed under the terms of the Apache Software        *)
+(*     License version 2.0                                                    *)
+(*                                                                            *)
+(******************************************************************************)
+
+OCaml.objects("fm-simplex",
+  ocaml + {
+    archive = "fm-simplex-plugin";
+    files = [
+      "simplex.ml";
+      "simplex_cache.ml";
+      "fmSimplexIneqs.ml";
+    ];
+    requires = ["alt-ergo-lib"];
+    byte_targets = ["fm-simplex_plugin.cma"];
+    asm_targets = ["fm-simplex-plugin.cmxs"];
+  });
+
