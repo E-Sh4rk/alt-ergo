@@ -16,6 +16,6 @@ OCaml.library("fm-simplex",
       "simplex_cache.ml";
       "fmSimplexIneqs.ml";
     ];
-    requires = ["alt-ergo-lib"];
+    requires = ["AltErgoLib"];
   });
 

@@ -11,41 +11,11 @@
 OCaml.program("alt-ergo",
   ocaml + {
     files = [
-      "text/main_text.ml"
+      "main_text.ml"
     ];
     requires = [
-      "alt-ergo-lib";
-      "alt-ergo-parsers";
-    ];
-  });
-
-OCaml.objects("gtkthread",
-  ocaml + {
-    installed = true;
-    dirname = "%{lablgtk2_FULL_SRC_DIR}%";
-    files = ["gtkThread.ml"];
-    requires = ["lablgtk2";"threads.posix"];
-    byte_targets = ["gtkThread.cmo"];
-    asm_targets = ["gtkThread.cmx"];
-  });
-
-OCaml.program("altgr-ergo",
-  ocaml + {
-    files = [
-      "gui/gui_session.ml";
-      "gui/gui_config.ml";
-      "gui/annoted_ast.ml";
-      "gui/connected_ast.ml";
-      "gui/gui_replay.ml";
-      "gui/main_gui.ml";
-    ];
-    requires = [
-      "gtkthread";
-      "lablgtk2";
-      "lablgtk2.sourceview2";
-      "threads.posix";
-      "alt-ergo-lib";
-      "alt-ergo-parsers";
+      "AltErgoLib";
+      "AltErgoParsers";
     ];
   });
 

@@ -1,11 +1,9 @@
 S lib/**
-S plugins/**
-S tools/**
 S parsers/**
+S tools/**
+S plugins/**
 
-B _obuild/alt-ergo/
-B _obuild/altgr-ergo/
-B _obuild/alt-ergo-lib/
+B _obuild/**
 
 FLG -short-paths
 FLG -strict-sequence

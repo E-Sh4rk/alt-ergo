@@ -18,6 +18,7 @@
 
 %{
 
+open AltErgoLib
 open Lexing
 open Why3_ptree
 open Parsed_interface
@@ -219,13 +220,13 @@ open Parsed
 
 (* Entry points *)
 
-%type <Parsed.lexpr list * bool> trigger_parser
+%type <AltErgoLib.Parsed.lexpr list * bool> trigger_parser
 %start trigger_parser
 
-%type <Parsed.lexpr> lexpr_parser
+%type <AltErgoLib.Parsed.lexpr> lexpr_parser
 %start lexpr_parser
 
-%type <Parsed.file> file_parser
+%type <AltErgoLib.Parsed.file> file_parser
 %start file_parser
 %%
 

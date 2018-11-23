@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open AltErgoLib
+open AltErgoParsers
 open Options
 
 (* done here to initialize options,

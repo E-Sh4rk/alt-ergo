@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open AltErgoLib
+open AltErgoParsers
 open Parsed
 open Typed
 open Format

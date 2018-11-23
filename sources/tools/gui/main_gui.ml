@@ -26,6 +26,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open AltErgoLib
+open AltErgoParsers
 open Typed
 open Commands
 open Gui_config

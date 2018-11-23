@@ -8,26 +8,33 @@
 (*                                                                            *)
 (******************************************************************************)
 
-OCaml.library("AltErgoParsers",
+OCaml.objects("gtkthread",
   ocaml + {
-    sort = true;
-    force_link = true;
-    requires = [
-      "dynlink";
-      "psmt2-frontend";
-      "AltErgoLib";
+    installed = true;
+    dirname = "%{lablgtk2_FULL_SRC_DIR}%";
+    files = ["gtkThread.ml"];
+    requires = ["lablgtk2";"threads.posix"];
+    byte_targets = ["gtkThread.cmo"];
+    asm_targets = ["gtkThread.cmx"];
+  });
+
+OCaml.program("altgr-ergo",
+  ocaml + {
+    files = [
+      "gui_session.ml";
+      "gui_config.ml";
+      "annoted_ast.ml";
+      "connected_ast.ml";
+      "gui_replay.ml";
+      "main_gui.ml";
     ];
-    files = OCaml.pack("AltErgoParsers", [
-      (* Common *)
-      "common/parsers.ml";
-      "common/parsers_loader.ml";
-
-      (* PSMT2 *)
-      "smt2/psmt2_to_alt_ergo.ml";
-
-      (* Why *)
-      "why/why_lexer.mll";
-      "why/why_parser.mly", {ocamlyacc = "menhir"};
-    ])
+    requires = [
+      "gtkthread";
+      "lablgtk2";
+      "lablgtk2.sourceview2";
+      "threads.posix";
+      "AltErgoLib";
+      "AltErgoParsers";
+    ];
   });
 

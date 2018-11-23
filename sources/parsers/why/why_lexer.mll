@@ -28,6 +28,7 @@
 
 {
   [@@@ocaml.warning "-33"]
+  open AltErgoLib
   open Options
 
   open Lexing

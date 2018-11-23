@@ -19,8 +19,8 @@ OCaml.library("AB-Why3",
       "why3_ptree.ml";
     ];
     requires = [
-      "alt-ergo-lib";
-      "alt-ergo-parsers";
+      "AltErgoLib";
+      "AltErgoParsers";
     ];
   });
 

@@ -8,9 +8,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-OCaml.library("alt-ergo-lib",
+OCaml.library("AltErgoLib",
   ocaml + {
-    (* archive = "alt-ergo"; *)
     sort = true;
     requires = [
       "num";
@@ -20,7 +19,7 @@ OCaml.library("alt-ergo-lib",
       "dynlink";
       "ocplib-simplex";
     ];
-    files = [
+    files = OCaml.pack("AltErgoLib", [
       (* Frontend *)
       "frontend/cnf.ml";
       "frontend/frontend.ml";
@@ -94,6 +93,6 @@ OCaml.library("alt-ergo-lib",
       "util/vec.ml";
       "util/version.ml";
       "util/zarithNumbers.ml";
-    ];
+    ])
   });
 
