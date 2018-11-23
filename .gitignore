@@ -26,7 +26,6 @@ altErgo.o
 *.log
 *~
 essentiel*
-configure
 autom4te*
 archi.*
 mlw
@@ -38,6 +37,7 @@ alt-ergo/tmp/
 *.conflicts
 *.automaton
 **/_obuild
+sources/autoconf
 sources/lib/util/config.ml
 sources/parsers/why/why_lexer.ml
 sources/parsers/why/why_parser.ml
