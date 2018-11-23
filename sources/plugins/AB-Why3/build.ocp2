@@ -8,14 +8,19 @@
 (*                                                                            *)
 (******************************************************************************)
 
-OCaml.library("fm-simplex",
+OCaml.library("AB-Why3",
   ocaml + {
-    archive = "fm-simplex-plugin";
+    archive = "AB-Why3-plugin";
+    sort = true;
     files = [
-      "simplex.ml";
-      "simplex_cache.ml";
-      "fmSimplexIneqs.ml";
+      "why3_lexer.mll";
+      "why3_loc.ml";
+      "why3_parser.mly", {ocamlyacc = "menhir"};
+      "why3_ptree.ml";
     ];
-    requires = ["alt-ergo-lib"];
+    requires = [
+      "alt-ergo-lib";
+      "alt-ergo-parsers";
+    ];
   });
 

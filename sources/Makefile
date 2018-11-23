@@ -76,7 +76,7 @@ gui: _obuild gen
 # on "lib", "bin" and "gui", since ocp-build can
 # parralelize more
 all: _obuild gen
-	$(OCP_BUILD) $(OCP_FLAGS) alt-ergo-lib alt-ergo altgr-ergo
+	$(OCP_BUILD) $(OCP_FLAGS)
 
 
 # ============
