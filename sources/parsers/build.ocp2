@@ -13,6 +13,7 @@ ocamlyacc = "menhir";
 OCaml.library("alt-ergo-parsers",
   ocaml + {
     sort = true;
+    force_link = true;
     requires = [
       "dynlink";
       "alt-ergo-lib";
@@ -20,7 +21,6 @@ OCaml.library("alt-ergo-parsers",
     ];
     files = [
       (* Common *)
-      "common/cmdline_parser.ml";
       "common/parsers.ml";
       "common/parsers_loader.ml";
 

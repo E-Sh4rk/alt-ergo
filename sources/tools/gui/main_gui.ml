@@ -35,6 +35,10 @@ open Connected_ast
 open Format
 open Options
 
+(* done here to initialize options,
+   before the instantiations of functors *)
+let () = Options.parse_cmdline_arguments ()
+
 module SatCont = (val (Sat_solver.get_current ()) : Sat_solver_sig.SatContainer)
 
 module TH =
