@@ -600,7 +600,7 @@ let interrupt = ref None
 let vt_signal =
   match Sys.os_type with
   | "Win32" -> Sys.sigterm
-  | _ -> Sys.sigvtalrm
+  | _ -> Sys.sigalrm
 
 let force_interrupt old_action_ref n =
   (* This function is called just before the thread's timeslice ends *)

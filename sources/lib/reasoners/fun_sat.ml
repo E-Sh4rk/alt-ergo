@@ -413,7 +413,7 @@ module Make (Th : Theory.S) : Sat_solver_sig.S = struct
             if Options.get_is_gui() then
               Sys.sigalrm (* troubles with GUI+VTARLM *)
             else
-              Sys.sigvtalrm
+              (*Sys.sigvtalrm*) Sys.sigalrm (* troubles with WSL *)
           in
           Sys.set_signal alrm
             (Sys.Signal_handle (fun _ ->

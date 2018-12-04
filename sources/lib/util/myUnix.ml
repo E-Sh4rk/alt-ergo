@@ -19,7 +19,7 @@ module Default_Unix = struct
     if Pervasives.(<>) timelimit 0. then
       let itimer =
         if is_gui then Unix.ITIMER_REAL (* troubles with VIRTUAL *)
-        else Unix.ITIMER_VIRTUAL
+        else (*Unix.ITIMER_VIRTUAL*) Unix.ITIMER_REAL (* WSL does not support VIRTUAL *)
       in
       ignore (Unix.setitimer itimer
                 { Unix.it_value = timelimit; Unix.it_interval = 0. })
@@ -27,7 +27,7 @@ module Default_Unix = struct
   let unset_timeout ~is_gui =
     let itimer =
       if is_gui then Unix.ITIMER_REAL (* troubles with VIRTUAL *)
-      else Unix.ITIMER_VIRTUAL
+      else (*Unix.ITIMER_VIRTUAL*) Unix.ITIMER_REAL (* WSL does not support VIRTUAL *)
     in
     ignore (Unix.setitimer itimer
               { Unix.it_value = 0.; Unix.it_interval = 0. })

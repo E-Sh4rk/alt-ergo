@@ -83,7 +83,7 @@ let () =
 let () =
   if not (model ()) then
     try
-      Sys.set_signal Sys.sigvtalrm
+      Sys.set_signal Sys.sigalrm
         (Sys.Signal_handle (fun _ -> Options.exec_timeout ()))
     with Invalid_argument _ -> ()
 
